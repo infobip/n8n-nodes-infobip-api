@@ -5,7 +5,7 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	IRequestOptions,
-	NodeConnectionType,
+	NodeConnectionTypes,
 } from 'n8n-workflow';
 
 export class InfobipApi implements INodeType {
@@ -20,8 +20,8 @@ export class InfobipApi implements INodeType {
 		defaults: {
 			name: 'InfobipApi',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
 		credentials: [
 			{
