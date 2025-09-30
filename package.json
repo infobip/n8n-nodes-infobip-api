@@ -1,6 +1,6 @@
 {
   "name": "@infobip/n8n-nodes-infobip-api",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "n8n nodes for Infobip API integration - send SMS & view delivery reports.",
   "keywords": [
     "n8n-community-node-package"
