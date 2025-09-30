@@ -1,5 +1,6 @@
 import {
 	IAuthenticateGeneric,
+	ICredentialTestRequest,
 	ICredentialType,
 	INodeProperties
 } from 'n8n-workflow';
@@ -39,4 +40,11 @@ export class InfobipApi implements ICredentialType {
 			},
 		},
 	};
+
+	test: ICredentialTestRequest | undefined = {
+		request: {
+			baseURL: '={{$credentials.domain}}',
+			url: '',
+		},
+	}
 }
