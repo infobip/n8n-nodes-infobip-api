@@ -1,10 +1,10 @@
 import {
 	IDataObject,
 	IExecuteFunctions,
+	IHttpRequestOptions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	IRequestOptions,
 	NodeConnectionTypes,
 } from 'n8n-workflow';
 
@@ -143,7 +143,7 @@ export class InfobipApi implements INodeType {
 async function sendSms(
 	this: IExecuteFunctions, 
 	iter: number, 
-	baseUrl: string
+	baseURL: string
 ): Promise<any> {
 	const phone = this.getNodeParameter('phone', iter) as string;
 	const content = this.getNodeParameter('content', iter) as string;
@@ -158,7 +158,7 @@ async function sendSms(
 		}
 	};
 
-	const options: IRequestOptions = {
+	const options: IHttpRequestOptions = {
 		headers: {
 			'Accept': 'application/json',
 			'Content-Type': 'application/json',
@@ -169,20 +169,21 @@ async function sendSms(
 				data,
 			],
 		},
-		uri: `${baseUrl}/sms/3/messages`,
+		baseURL,
+		url: '/sms/3/messages',
 		json: true,
 	};
-	return await this.helpers.requestWithAuthentication.call(this, 'infobipApi', options);
+	return await this.helpers.httpRequestWithAuthentication.call(this, 'infobipApi', options);
 }
 
 async function smsDeliveryReport(
 	this: IExecuteFunctions, 
 	iter: number, 
-	baseUrl: string
+	baseURL: string
 ): Promise<any> {
 	const messageId = this.getNodeParameter('messageId', iter) as string;
 
-	const options: IRequestOptions = {
+	const options: IHttpRequestOptions = {
 		headers: {
 			'Accept': 'application/json',
 			'Content-Type': 'application/json',
@@ -191,8 +192,9 @@ async function smsDeliveryReport(
 		qs: {
 			messageId: messageId,
 		},
-		uri: `${baseUrl}/sms/3/reports`,
+		baseURL,
+		url: '/sms/3/reports',
 		json: true,
 	};
-	return await this.helpers.requestWithAuthentication.call(this, 'infobipApi', options);
+	return await this.helpers.httpRequestWithAuthentication.call(this, 'infobipApi', options);
 }
