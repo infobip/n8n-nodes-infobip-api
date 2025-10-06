@@ -15,7 +15,7 @@ export class InfobipApi implements INodeType {
 		icon: { light: 'file:infobip.svg', dark: 'file:infobip.svg' },
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		subtitle: '={{$parameter["operation"]}}',
 		description: 'Interact with Infobip SMS API',
 		defaults: {
 			name: 'InfobipApi',
