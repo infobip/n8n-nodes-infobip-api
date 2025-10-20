@@ -5,6 +5,7 @@ import {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	NodeApiError,
 	NodeConnectionTypes,
 } from 'n8n-workflow';
 
@@ -49,7 +50,7 @@ export class InfobipApi implements INodeType {
 				default: 'sendSms',
 				noDataExpression: true,
 			},
-            {
+			{
 				displayName: 'Sender',
 				name: 'sender',
 				type: 'string',
@@ -94,9 +95,9 @@ export class InfobipApi implements INodeType {
 						],
 					},
 				},
-				default:'',
+				default: '',
 				placeholder: 'Message',
-				description:'Content of the message',
+				description: 'Content of the message',
 			},
 			{
 				displayName: 'Message ID',
@@ -126,23 +127,42 @@ export class InfobipApi implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			if (operation === 'sendSms') {
-				const responseData = await sendSms.call(this, i, baseUrl);
-				returnData.push(responseData);
+				try {
+					const responseData = await sendSms.call(this, i, baseUrl);
+					returnData.push(responseData);
+				} catch (error) {
+					if (this.continueOnFail()) {
+						returnData.push({ json: { error: error.message }, pairedItem: { item: i } })
+						continue;
+					}
+					throw new NodeApiError(this.getNode(), error);
+				}
 			}
 			if (operation === 'smsDeliveryReport') {
-				const responseData = await smsDeliveryReport.call(this, i, baseUrl);
-				returnData.push(responseData);
+				try {
+					const responseData = await smsDeliveryReport.call(this, i, baseUrl);
+					returnData.push(responseData);
+				} catch (error) {
+					if (this.continueOnFail()) {
+						returnData.push({ json: { error: error.message }, pairedItem: { item: i } })
+						continue;
+					}
+					throw new NodeApiError(this.getNode(), error);
+				}
 			}
 		}
-	
-		return [this.helpers.returnJsonArray(returnData)];
+
+		return [this.helpers.returnJsonArray(returnData.map((item, index) => ({
+			json: item,
+			pairedItem: { item: index }
+		})))];
 	}
 
 }
 
 async function sendSms(
-	this: IExecuteFunctions, 
-	iter: number, 
+	this: IExecuteFunctions,
+	iter: number,
 	baseURL: string
 ): Promise<any> {
 	const phone = this.getNodeParameter('phone', iter) as string;
@@ -177,8 +197,8 @@ async function sendSms(
 }
 
 async function smsDeliveryReport(
-	this: IExecuteFunctions, 
-	iter: number, 
+	this: IExecuteFunctions,
+	iter: number,
 	baseURL: string
 ): Promise<any> {
 	const messageId = this.getNodeParameter('messageId', iter) as string;
