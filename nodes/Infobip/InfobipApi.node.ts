@@ -17,7 +17,7 @@ export class InfobipApi implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
-		description: 'Interact with Infobip SMS API',
+		description: 'Interact with Infobip API',
 		defaults: {
 			name: 'InfobipApi',
 		},
@@ -37,18 +37,50 @@ export class InfobipApi implements INodeType {
 				type: 'options',
 				options: [
 					{
-						name: 'Send an SMS',
-						value: 'sendSms',
-						action: 'Send an SMS',
+						name: 'Check Delivery Report',
+						value: 'checkDeliveryReport',
+						action: 'Check delivery report',
 					},
 					{
-						name: 'View SMS Delivery Report',
-						value: 'smsDeliveryReport',
-						action: 'View sms delivery report',
+						name: 'Send Message',
+						value: 'sendMessage',
+						action: 'Send message',
 					},
 				],
-				default: 'sendSms',
+				default: 'sendMessage',
 				noDataExpression: true,
+			},
+			{
+				displayName: 'Channel',
+				name: 'channel',
+				type: 'options',
+				options: [
+					{
+						name: 'RCS',
+						value: 'rcs',
+					},
+					{
+						name: 'SMS',
+						value: 'sms',
+					},
+					{
+						name: 'Viber',
+						value: 'viber',
+					},
+					{
+						name: 'WhatsApp',
+						value: 'whatsapp',
+					},
+				],
+				default: 'sms',
+				displayOptions: {
+					show: {
+						operation: [
+							'sendMessage',
+						],
+					},
+				},
+				description: 'The messaging channel to use',
 			},
 			{
 				displayName: 'Sender',
@@ -58,13 +90,71 @@ export class InfobipApi implements INodeType {
 				displayOptions: {
 					show: {
 						operation: [
-							'sendSms',
+							'sendMessage',
+						],
+						channel: [
+							'sms',
 						],
 					},
 				},
 				default: '',
 				placeholder: 'Enter sender ID',
 				description: 'The sender ID',
+			},
+			{
+				displayName: 'Sender',
+				name: 'sender',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: [
+							'sendMessage',
+						],
+						channel: [
+							'viber',
+						],
+					},
+				},
+				default: '',
+				placeholder: 'Enter sender ID',
+				description: 'The sender ID',
+			},
+			{
+				displayName: 'Sender',
+				name: 'sender',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: [
+							'sendMessage',
+						],
+						channel: [
+							'rcs',
+							'whatsapp',
+						],
+					},
+				},
+				default: '',
+				placeholder: 'Enter sender ID',
+				description: 'The sender ID',
+			},
+			{
+				displayName: 'To send a WhatsApp message, the user needs to have replied to the conversation in the last 24 hours. You can still start the conversation by sending a template message. <a href="https://www.infobip.com/docs/tutorials/send-whatsapp-template-messages" target="_blank">Learn more</a>',
+				name: 'whatsappNotice',
+				type: 'notice',
+				default: '',
+				displayOptions: {
+					show: {
+						operation: [
+							'sendMessage',
+						],
+						channel: [
+							'whatsapp',
+						],
+					},
+				},
 			},
 			{
 				displayName: 'Phone Number',
@@ -74,7 +164,7 @@ export class InfobipApi implements INodeType {
 				displayOptions: {
 					show: {
 						operation: [
-							'sendSms',
+							'sendMessage',
 						],
 					},
 				},
@@ -91,7 +181,7 @@ export class InfobipApi implements INodeType {
 				displayOptions: {
 					show: {
 						operation: [
-							'sendSms',
+							'sendMessage',
 						],
 					},
 				},
@@ -107,18 +197,17 @@ export class InfobipApi implements INodeType {
 				displayOptions: {
 					show: {
 						operation: [
-							'smsDeliveryReport',
+							'checkDeliveryReport',
 						],
 					},
 				},
 				default: '',
 				placeholder: 'Message ID',
-				description: 'Unique identifier of the SMS message whose delivery report you want to retrieve',
+				description: 'Unique identifier of the message whose delivery report you want to retrieve',
 			},
 		],
 	};
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		// Handle data coming from previous nodes
 		const items = this.getInputData();
 		const operation = this.getNodeParameter('operation', 0) as string;
 		const returnData = [];
@@ -126,9 +215,9 @@ export class InfobipApi implements INodeType {
 		const baseUrl = credentials?.domain as string;
 
 		for (let i = 0; i < items.length; i++) {
-			if (operation === 'sendSms') {
+			if (operation === 'sendMessage') {
 				try {
-					const responseData = await sendSms.call(this, i, baseUrl);
+					const responseData = await sendMessage.call(this, i, baseUrl);
 					returnData.push(responseData);
 				} catch (error) {
 					if (this.continueOnFail()) {
@@ -137,10 +226,9 @@ export class InfobipApi implements INodeType {
 					}
 					throw new NodeApiError(this.getNode(), error);
 				}
-			}
-			if (operation === 'smsDeliveryReport') {
+			} else if (operation === 'checkDeliveryReport') {
 				try {
-					const responseData = await smsDeliveryReport.call(this, i, baseUrl);
+					const responseData = await checkDeliveryReport.call(this, i, baseUrl);
 					returnData.push(responseData);
 				} catch (error) {
 					if (this.continueOnFail()) {
@@ -160,23 +248,67 @@ export class InfobipApi implements INodeType {
 
 }
 
-async function sendSms(
+async function sendMessage(
 	this: IExecuteFunctions,
 	iter: number,
 	baseURL: string
 ): Promise<any> {
+	const channel = this.getNodeParameter('channel', iter) as string;
 	const phone = this.getNodeParameter('phone', iter) as string;
 	const content = this.getNodeParameter('content', iter) as string;
 	const sender = this.getNodeParameter('sender', iter) as string;
-	const data: IDataObject = {
-		sender,
-		destinations: [
-			{ to: phone }
-		],
-		content: {
-			text: content
-		}
-	};
+
+	let url: string;
+	let body: IDataObject;
+
+	switch (channel) {
+		case 'sms':
+			url = '/sms/3/messages';
+			body = {
+				messages: [
+					{
+						sender,
+						destinations: [{ to: phone }],
+						content: { text: content },
+					},
+				],
+			};
+			break;
+		case 'rcs':
+			url = '/rcs/2/messages';
+			body = {
+				messages: [
+					{
+						sender,
+						destinations: [{ to: phone }],
+						content: { text: content, type: 'TEXT' },
+					},
+				],
+			};
+			break;
+		case 'viber':
+			url = '/viber/2/messages';
+			body = {
+				messages: [
+					{
+						sender,
+						destinations: [{ to: phone }],
+						content: { type: 'TEXT', text: content },
+					},
+				],
+			};
+			break;
+		case 'whatsapp':
+			url = '/whatsapp/1/message/text';
+			body = {
+				from: sender,
+				to: phone,
+				content: { text: content },
+			};
+			break;
+		default:
+			throw new NodeApiError(this.getNode(), { message: `Unsupported channel: ${channel}` } as any);
+	}
 
 	const options: IHttpRequestOptions = {
 		headers: {
@@ -184,19 +316,15 @@ async function sendSms(
 			'Content-Type': 'application/json',
 		},
 		method: 'POST',
-		body: {
-			messages: [
-				data,
-			],
-		},
+		body,
 		baseURL,
-		url: '/sms/3/messages',
+		url,
 		json: true,
 	};
 	return await this.helpers.httpRequestWithAuthentication.call(this, 'infobipApi', options);
 }
 
-async function smsDeliveryReport(
+async function checkDeliveryReport(
 	this: IExecuteFunctions,
 	iter: number,
 	baseURL: string
@@ -213,7 +341,7 @@ async function smsDeliveryReport(
 			messageId: messageId,
 		},
 		baseURL,
-		url: '/sms/3/reports',
+		url: '/messages-api/1/reports',
 		json: true,
 	};
 	return await this.helpers.httpRequestWithAuthentication.call(this, 'infobipApi', options);
